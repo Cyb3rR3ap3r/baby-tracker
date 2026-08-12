@@ -1,0 +1,80 @@
+@import "tailwindcss";
+
+/* Dark mode driven by a class on <html> (set from user settings). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --background: #f6f7fb;
+  --surface: #ffffff;
+  --foreground: #1a1c28;
+  --muted: #6b7280;
+  --border: #e7e9f2;
+  --brand: #7c6cf6;
+}
+
+.dark {
+  --background: #0c0d14;
+  --surface: #161824;
+  --foreground: #eceef6;
+  --muted: #969ab0;
+  --border: #262a3a;
+  --brand: #9a8dff;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-brand: var(--brand);
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100dvh;
+}
+
+/* Respect iOS safe areas for the fixed bottom nav & FAB. */
+.pb-safe {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+.bottom-safe {
+  bottom: max(0px, env(safe-area-inset-bottom));
+}
+
+/* Subtle scrollbar */
+* {
+  scrollbar-width: thin;
+}
+
+@keyframes sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.animate-sheet {
+  animation: sheet-in 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.animate-fade {
+  animation: fade-in 0.2s ease-out;
+}
