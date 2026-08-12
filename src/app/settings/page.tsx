@@ -29,11 +29,11 @@ export default function SettingsPage() {
 
   function importData(file: File) {
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
       try {
         const parsed = JSON.parse(String(reader.result)) as AppData;
         if (!parsed || !Array.isArray(parsed.events)) throw new Error("bad file");
-        replaceAll(parsed);
+        await replaceAll(parsed);
         flash(`Imported ${parsed.events.length} entries`);
       } catch {
         flash("Could not read that file");
@@ -130,8 +130,8 @@ export default function SettingsPage() {
       {/* Data */}
       <Card title="Your data">
         <p className="text-sm text-muted">
-          {events.length} entries stored privately on this device. Back up regularly, or move data to
-          another phone with export / import.
+          {events.length} entries saved on your server and shared across every device on your
+          network. Export a JSON backup any time, or import one to restore.
         </p>
         <div className="grid grid-cols-2 gap-3">
           <button
@@ -178,7 +178,8 @@ export default function SettingsPage() {
       )}
 
       <p className="px-1 text-center text-xs text-muted">
-        Little Log keeps everything on your device — nothing is sent to a server.
+        Little Log stores data on your own server — shared across your devices, private to your
+        network.
       </p>
     </div>
   );
