@@ -1,0 +1,28 @@
+services:
+  baby-tracker:
+    # Build from this repo. On TrueNAS you can also point `image:` at a
+    # prebuilt image (e.g. from GHCR) and drop the `build:` block — see README.
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: baby-tracker:latest
+    container_name: baby-tracker
+    restart: unless-stopped
+    ports:
+      # host:container — change the left number if 3000 is taken on your NAS.
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - TZ=America/New_York # set to your timezone
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
