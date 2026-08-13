@@ -106,7 +106,7 @@ export function SideNav() {
           );
         })}
       </nav>
-      <div className="mt-auto px-3 text-xs text-muted">Little Log · on-device</div>
+      <div className="mt-auto px-3 text-xs text-muted">Little Log · self-hosted</div>
     </aside>
   );
 }

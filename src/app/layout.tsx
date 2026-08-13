@@ -41,9 +41,7 @@ export const viewport: Viewport = {
 // Set the theme class before paint to avoid a flash of the wrong theme.
 const themeScript = `
 (function(){try{
-  var raw = localStorage.getItem('baby-tracker:data:v1');
-  var pref = 'system';
-  if(raw){var d = JSON.parse(raw); if(d && d.settings && d.settings.theme) pref = d.settings.theme;}
+  var pref = localStorage.getItem('bt-theme') || 'system';
   var mq = window.matchMedia('(prefers-color-scheme: dark)').matches;
   if(pref === 'dark' || (pref === 'system' && mq)) document.documentElement.classList.add('dark');
 }catch(e){}})();
