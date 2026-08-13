@@ -28,7 +28,11 @@ ENV HOSTNAME=0.0.0.0
 # Where the SQLite database lives (mount a volume here to persist it).
 ENV DB_PATH=/data/baby-tracker.db
 
-RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
+# su-exec lets the entrypoint drop from root to an unprivileged user after it
+# has fixed permissions on the mounted data volume.
+RUN apk add --no-cache su-exec \
+  && addgroup -g 1001 -S nodejs \
+  && adduser -S nextjs -u 1001
 
 # The standalone output bundles a minimal server + traced deps.
 COPY --from=builder /app/public ./public
@@ -38,14 +42,17 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # runs on both amd64 and arm64 regardless of what tracing selected.
 COPY --from=builder /app/node_modules/better-sqlite3 ./node_modules/better-sqlite3
 
-# Persistent data directory, owned by the app user.
+COPY --chmod=0755 docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+
+# Persistent data directory.
 RUN mkdir -p /data && chown -R nextjs:nodejs /data
 VOLUME ["/data"]
 
-USER nextjs
 EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:3000/api/state').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
+# Start as root so the entrypoint can chown /data, then it drops to PUID:PGID.
+ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["node", "server.js"]
