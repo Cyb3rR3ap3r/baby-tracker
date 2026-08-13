@@ -74,6 +74,7 @@ to run it on a home server.
 | `DB_PATH` | `./data/baby-tracker.db` (`/data/baby-tracker.db` in Docker) | SQLite database file location |
 | `PORT` | `3000` | HTTP port |
 | `TZ` | system | Timezone for the container |
+| `PUID` / `PGID` | `1001` / `1001` | User/group the server runs as. The container starts as root, fixes ownership of the `/data` volume, then drops to this user — so a root-owned dataset just works. Set these to match your dataset owner if you prefer. |
 
 ## 🐳 Run with Docker
 
@@ -121,7 +122,11 @@ Then in TrueNAS:
    (TrueNAS restricts host ports to 9000+ by default).
 4. **Storage:** add a **host-path (or dataset) volume** mounted at **`/data`** — point
    it at a dataset like `/mnt/tank/apps/baby-tracker`. This is where the SQLite
-   database is kept, so ZFS snapshots and replication back it up automatically.
+   database is kept, so ZFS snapshots and replication back it up automatically. You
+   don't need to pre-set permissions — the container starts as root, takes ownership
+   of `/data`, then drops to a non-root user. Leave the app's **user/group at the
+   default (root)** so it can do this; if the UI pins a non-root uid, either grant that
+   uid write access to the dataset or set `PUID`/`PGID` to match it.
 5. Deploy, then open `http://<truenas-ip>:30030`.
 
 Compose YAML for the **Install via YAML** flow (edit the host path to a real dataset):
