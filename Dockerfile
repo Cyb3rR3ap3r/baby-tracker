@@ -3,10 +3,12 @@
 # ---- Dependencies ----
 FROM node:22-alpine AS deps
 WORKDIR /app
-# better-sqlite3 v13 ships prebuilt binaries (incl. musl + arm64), so no
-# native toolchain is needed on Alpine.
+# better-sqlite3 v13 ships prebuilt binaries (incl. musl + arm64) under
+# prebuilds/ and loads them directly at runtime. --ignore-scripts skips npm's
+# implicit `node-gyp rebuild` (which would otherwise need Python/make/g++ that
+# Alpine doesn't have), so no native toolchain is required.
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm ci --ignore-scripts
 
 # ---- Builder ----
 FROM node:22-alpine AS builder
