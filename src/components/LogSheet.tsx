@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Sheet } from "./Sheet";
 import { Field, PrimaryButton, Segmented, Stepper, TextArea, TextInput } from "./form";
+import { NursingControls } from "./NursingControls";
 import { EVENT_META } from "@/lib/eventMeta";
 import { useStore } from "@/lib/store";
 import type { BabyEvent, EventType } from "@/lib/types";
@@ -29,9 +30,13 @@ interface Props {
 type Draft = Record<string, unknown> & { startAt: number };
 
 export function LogSheet({ type, event, onClose }: Props) {
-  const { settings, addEvent, updateEvent, deleteEvent } = useStore();
+  const { settings, addEvent, updateEvent, deleteEvent, activeNursing, nursing } = useStore();
   const meta = EVENT_META[type];
   const editing = !!event;
+
+  // New nursing entries default to the live timer; editing is always manual.
+  const [nursingMode, setNursingMode] = useState<"timer" | "manual">("timer");
+  const showTimer = type === "nursing" && !editing && nursingMode === "timer";
 
   const [draft, setDraft] = useState<Draft>(() => initialDraft(type, event, settings));
   const set = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }));
@@ -51,6 +56,52 @@ export function LogSheet({ type, event, onClose }: Props) {
   return (
     <Sheet open onClose={onClose} title={`${editing ? "Edit" : "Log"} ${meta.label} ${meta.emoji}`}>
       <div className="space-y-5">
+        {type === "nursing" && !editing && (
+          <Segmented
+            columns={2}
+            value={nursingMode}
+            onChange={(v) => setNursingMode(v as "timer" | "manual")}
+            options={[
+              { value: "timer", label: "Live timer", emoji: "⏱️" },
+              { value: "manual", label: "Manual", emoji: "✏️" },
+            ]}
+          />
+        )}
+
+        {showTimer &&
+          (activeNursing ? (
+            <NursingControls onFinished={onClose} />
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm text-muted">
+                Start a side to begin timing. The session keeps running even if you close this or
+                lock your phone, and shows at the top of every screen until you finish it.
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => {
+                    nursing("start", "left");
+                    onClose();
+                  }}
+                  className="rounded-2xl border border-brand bg-brand/10 px-3 py-5 text-base font-bold transition active:scale-[0.98]"
+                >
+                  ▶ Start left
+                </button>
+                <button
+                  onClick={() => {
+                    nursing("start", "right");
+                    onClose();
+                  }}
+                  className="rounded-2xl border border-brand bg-brand/10 px-3 py-5 text-base font-bold transition active:scale-[0.98]"
+                >
+                  ▶ Start right
+                </button>
+              </div>
+            </div>
+          ))}
+
+        {!showTimer && (
+          <>
         {/* Time */}
         <Field label={meta.hasDuration ? "Start time" : "Time"}>
           <TextInput
@@ -287,6 +338,8 @@ export function LogSheet({ type, event, onClose }: Props) {
           >
             Delete entry
           </button>
+        )}
+          </>
         )}
       </div>
     </Sheet>

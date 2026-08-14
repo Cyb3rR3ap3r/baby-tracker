@@ -12,7 +12,10 @@ to use one-handed on a phone, and it looks just as good on a laptop.
   forms, steppers and dropdowns. Everything is tuned for quick, one-handed use.
 - **Track everything that matters:**
   - 🧷 Diapers (wet / dirty / both / dry)
-  - 🤱 Nursing (side + duration)
+  - 🤱 Nursing — a **live timer** that clocks each breast separately (start /
+    switch sides / pause / resume) and logs the session with per-side totals when
+    you finish, **or** a quick manual entry. The running session is saved on the
+    server, so it survives a phone lock or reload and shows on every device.
   - 🍼 Bottle feeds (amount + contents)
   - 💧 Pumping (side + amount + duration)
   - 😴 Sleep (with "still sleeping" tracking)
@@ -187,4 +190,5 @@ The client talks to a small REST API (handy if you ever want to script imports):
 | `PATCH` / `DELETE` | `/api/events/:id` | Update / delete an event |
 | `PUT` | `/api/settings` | Update units & theme |
 | `PUT` | `/api/baby` | Update baby profile |
+| `POST` | `/api/nursing` | Live-timer control (`start`/`switch`/`pause`/`resume`/`complete`/`discard`) |
 | `POST` / `DELETE` | `/api/data` | Import (replace all) / clear all entries |

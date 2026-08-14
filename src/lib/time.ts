@@ -23,6 +23,16 @@ export function formatDuration(seconds: number): string {
   return `${s}s`;
 }
 
+/** Stopwatch style, e.g. "6:05" or "1:02:09". */
+export function clockDuration(seconds: number): string {
+  const s = Math.max(0, Math.floor(seconds));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return h > 0 ? `${h}:${pad(m)}:${pad(sec)}` : `${m}:${pad(sec)}`;
+}
+
 /** Relative "time since" label, e.g. "just now", "12m ago", "3h ago", "2d ago". */
 export function timeAgo(ts: number, now = Date.now()): string {
   const diff = Math.max(0, now - ts);

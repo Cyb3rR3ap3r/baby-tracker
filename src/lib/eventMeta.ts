@@ -58,8 +58,15 @@ export function eventSummary(e: BabyEvent, s: Settings): string {
     case "diaper":
       return DIAPER_LABEL[e.diaperKind] ?? "Diaper";
     case "nursing": {
-      const dur = e.durationSec ? ` · ${formatDuration(e.durationSec)}` : "";
-      return `${SIDE_LABEL[e.side]}${dur}`;
+      const total = e.durationSec ? formatDuration(e.durationSec) : "";
+      if (e.leftSec != null && e.rightSec != null && (e.leftSec > 0 || e.rightSec > 0)) {
+        const parts: string[] = [];
+        if (e.leftSec > 0) parts.push(`L ${formatDuration(e.leftSec)}`);
+        if (e.rightSec > 0) parts.push(`R ${formatDuration(e.rightSec)}`);
+        if (total) parts.push(total);
+        return parts.join(" · ");
+      }
+      return `${SIDE_LABEL[e.side]}${total ? ` · ${total}` : ""}`;
     }
     case "bottle":
       return `${formatVolume(e.amountMl, s.volumeUnit)} · ${CONTENTS_LABEL[e.contents]}`;
