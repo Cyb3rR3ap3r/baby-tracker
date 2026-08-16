@@ -40,6 +40,9 @@ export interface NursingEvent extends BaseEvent {
   side: Side;
   /** Duration in seconds. Derived from start/end when both present. */
   durationSec?: number;
+  /** Per-side seconds, when logged via the live timer. */
+  leftSec?: number;
+  rightSec?: number;
 }
 
 export interface BottleEvent extends BaseEvent {

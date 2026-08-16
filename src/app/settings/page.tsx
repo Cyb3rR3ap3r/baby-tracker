@@ -33,8 +33,12 @@ export default function SettingsPage() {
       try {
         const parsed = JSON.parse(String(reader.result)) as AppData;
         if (!parsed || !Array.isArray(parsed.events)) throw new Error("bad file");
+        const ok = confirm(
+          `Restore ${parsed.events.length} entries from this backup? This replaces all current data on the server.`
+        );
+        if (!ok) return;
         await replaceAll(parsed);
-        flash(`Imported ${parsed.events.length} entries`);
+        flash(`Restored ${parsed.events.length} entries`);
       } catch {
         flash("Could not read that file");
       }
@@ -128,28 +132,29 @@ export default function SettingsPage() {
       </Card>
 
       {/* Data */}
-      <Card title="Your data">
+      <Card title="Backup & restore">
         <p className="text-sm text-muted">
-          {events.length} entries saved on your server and shared across every device on your
-          network. Export a JSON backup any time, or import one to restore.
+          {events.length} entries saved on your server and shared across every device. A backup is a
+          single JSON file with your <strong>full history</strong> plus baby profile and settings —
+          keep a copy somewhere safe, or use it to move to another server.
         </p>
         <div className="grid grid-cols-2 gap-3">
           <button
             onClick={exportData}
             className="rounded-xl border border-border bg-background px-4 py-3 text-sm font-bold transition hover:border-brand/50"
           >
-            ⬇︎ Export
+            ⬇︎ Download backup
           </button>
           <button
             onClick={() => fileRef.current?.click()}
             className="rounded-xl border border-border bg-background px-4 py-3 text-sm font-bold transition hover:border-brand/50"
           >
-            ⬆︎ Import
+            ⬆︎ Restore backup
           </button>
           <input
             ref={fileRef}
             type="file"
-            accept="application/json"
+            accept="application/json,.json"
             className="hidden"
             onChange={(e) => {
               const f = e.target.files?.[0];

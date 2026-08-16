@@ -10,6 +10,9 @@ import {
   useState,
 } from "react";
 import type { AppData, BabyEvent, Baby, Settings } from "./types";
+import { applyAction, type NursingAction, type NursingSession, type NursingSide } from "./nursing";
+
+type StateResponse = AppData & { activeNursing: NursingSession | null };
 
 const DATA_VERSION = 1;
 const POLL_MS = 15000; // refetch cadence so other devices' changes show up
@@ -59,37 +62,45 @@ interface StoreContextValue {
   replaceAll: (data: AppData) => Promise<void>;
   clearEvents: () => void;
   refresh: () => void;
+  activeNursing: NursingSession | null;
+  nursing: (action: NursingAction, side?: NursingSide) => void;
 }
 
 const StoreContext = createContext<StoreContextValue | null>(null);
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [data, setData] = useState<AppData>(DEFAULT_DATA);
+  const [activeNursing, setActiveNursing] = useState<NursingSession | null>(null);
   const [ready, setReady] = useState(false);
   const [online, setOnline] = useState(true);
   // Number of in-flight writes; while > 0 we skip background polls so a poll
   // can't clobber an optimistic update that hasn't been persisted yet.
   const pending = useRef(0);
 
+  const applyState = useCallback((resp: StateResponse) => {
+    const { activeNursing: an, ...appData } = resp;
+    setData(appData);
+    setActiveNursing(an ?? null);
+  }, []);
+
   const refresh = useCallback(async () => {
     if (pending.current > 0) return;
     try {
-      const next = await api<AppData>("/api/state");
-      setData(next);
+      applyState(await api<StateResponse>("/api/state"));
       setOnline(true);
     } catch {
       setOnline(false);
     }
-  }, []);
+  }, [applyState]);
 
   // Initial load.
   useEffect(() => {
     let alive = true;
     (async () => {
       try {
-        const next = await api<AppData>("/api/state");
+        const next = await api<StateResponse>("/api/state");
         if (alive) {
-          setData(next);
+          applyState(next);
           setOnline(true);
         }
       } catch {
@@ -101,7 +112,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [applyState]);
 
   // Keep a local theme hint so the pre-paint script avoids a flash.
   useEffect(() => {
@@ -211,6 +222,42 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     );
   }, [mutate]);
 
+  const nursing = useCallback(
+    (action: NursingAction, side?: NursingSide) => {
+      const now = Date.now();
+      if (action === "complete" || action === "discard") {
+        // Clear locally right away; refresh pulls the new history entry.
+        setActiveNursing(null);
+        pending.current += 1;
+        api("/api/nursing", { method: "POST", body: JSON.stringify({ action }) })
+          .then(() => setOnline(true))
+          .catch(() => setOnline(false))
+          .finally(() => {
+            pending.current -= 1;
+            if (pending.current === 0) refresh();
+          });
+        return;
+      }
+      // start / switch / pause / resume — optimistic, then take the server's
+      // authoritative session from the response.
+      setActiveNursing((prev) => applyAction(prev, action, side, now));
+      pending.current += 1;
+      api<{ session: NursingSession | null }>("/api/nursing", {
+        method: "POST",
+        body: JSON.stringify({ action, side }),
+      })
+        .then((res) => {
+          setActiveNursing(res.session);
+          setOnline(true);
+        })
+        .catch(() => setOnline(false))
+        .finally(() => {
+          pending.current -= 1;
+        });
+    },
+    [refresh]
+  );
+
   const replaceAll = useCallback(async (next: AppData) => {
     pending.current += 1;
     try {
@@ -244,6 +291,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       replaceAll,
       clearEvents,
       refresh,
+      activeNursing,
+      nursing,
     }),
     [
       ready,
@@ -257,6 +306,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       replaceAll,
       clearEvents,
       refresh,
+      activeNursing,
+      nursing,
     ]
   );
 

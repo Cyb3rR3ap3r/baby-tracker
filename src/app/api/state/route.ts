@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
-import { getState } from "@/lib/db";
+import { getFullState } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-// One call returns everything the client needs on load / poll.
+// One call returns everything the client needs on load / poll (including any
+// in-progress nursing session).
 export async function GET() {
-  return NextResponse.json(getState());
+  return NextResponse.json(getFullState());
 }

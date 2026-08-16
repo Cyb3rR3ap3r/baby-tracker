@@ -2,7 +2,14 @@ import "server-only";
 import Database from "better-sqlite3";
 import fs from "node:fs";
 import path from "node:path";
-import type { AppData, BabyEvent, Baby, Settings } from "./types";
+import type { AppData, BabyEvent, Baby, NursingEvent, Settings } from "./types";
+import {
+  applyAction,
+  sessionToEntry,
+  type NursingAction,
+  type NursingSession,
+  type NursingSide,
+} from "./nursing";
 
 // --- Defaults (mirrored on the client for first-run state) ---
 export const DEFAULT_SETTINGS: Settings = {
@@ -148,6 +155,65 @@ export function clearEvents(): void {
   getDb().prepare("DELETE FROM events").run();
 }
 
+// --- Active nursing session ------------------------------------------------
+const NURSING_KEY = "activeNursing";
+
+function genId(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+export function getActiveNursing(): NursingSession | null {
+  const row = getDb().prepare("SELECT value FROM meta WHERE key = ?").get(NURSING_KEY) as
+    | { value: string }
+    | undefined;
+  if (!row) return null;
+  try {
+    return JSON.parse(row.value) as NursingSession;
+  } catch {
+    return null;
+  }
+}
+
+function setActiveNursing(s: NursingSession | null): void {
+  if (s === null) {
+    getDb().prepare("DELETE FROM meta WHERE key = ?").run(NURSING_KEY);
+  } else {
+    writeMeta(NURSING_KEY, s);
+  }
+}
+
+/**
+ * Apply a nursing timer action. `complete` also writes a history entry and
+ * returns it; every other action returns the updated (or cleared) session.
+ */
+export function nursingAction(
+  action: NursingAction,
+  side: NursingSide | undefined
+): { session: NursingSession | null; event?: NursingEvent } {
+  const now = Date.now();
+  const current = getActiveNursing();
+
+  if (action === "complete") {
+    if (!current) return { session: null };
+    const fields = sessionToEntry(current, now);
+    const event: NursingEvent = {
+      id: genId(),
+      type: "nursing",
+      createdAt: now,
+      updatedAt: now,
+      ...fields,
+    };
+    upsertEvent(event);
+    setActiveNursing(null);
+    return { session: null, event };
+  }
+
+  const next = applyAction(current, action, side, now);
+  setActiveNursing(next);
+  return { session: next };
+}
+
 // --- Whole-state read + bulk replace (export / import) ---------------------
 export function getState(): AppData {
   return {
@@ -156,6 +222,10 @@ export function getState(): AppData {
     settings: getSettings(),
     events: listEvents(),
   };
+}
+
+export function getFullState(): AppData & { activeNursing: NursingSession | null } {
+  return { ...getState(), activeNursing: getActiveNursing() };
 }
 
 export function replaceAll(data: AppData): AppData {
@@ -177,6 +247,7 @@ export function replaceAll(data: AppData): AppData {
     }
     writeMeta("settings", { ...DEFAULT_SETTINGS, ...d.settings });
     writeMeta("baby", { ...DEFAULT_BABY, ...d.baby });
+    db.prepare("DELETE FROM meta WHERE key = ?").run(NURSING_KEY);
   });
   tx(data);
   return getState();
